@@ -1,24 +1,26 @@
 package com.example.personalhealthcareapp.db
 
-import com.google.protobuf.Timestamp
 import io.objectbox.annotation.Entity
 import io.objectbox.annotation.HnswIndex
 import io.objectbox.annotation.Id
-// patient doc
+
+/** Parent document — one per scanned medical report. */
 @Entity
 data class Medicaldata(
-    @Id var id: Long=0,
-    val tittle:String="",//tittle like blood test , date
-    val imagepath: String="",
-    val timestamp : Long= System.currentTimeMillis()
+    @Id var id: Long = 0,
+    val title: String = "",          // e.g. "Blood Test", "X-Ray Report"
+    val imagepath: String = "",
+    val timestamp: Long = System.currentTimeMillis()
 )
 
+/** A single text chunk embedded as a vector. Links back to its parent document. */
 @Entity
 data class MedicalChunck(
     @Id var id: Long = 0,
-    val chunkedtext: String="",
+    val chunkedtext: String = "",
+    val documentId: Long = 0,        // FK → Medicaldata.id
 
-    //vector Engine
+    // USE TFLite outputs 100-dimensional embeddings
     @HnswIndex(dimensions = 100)
     var textEmbedding: FloatArray? = null
 )

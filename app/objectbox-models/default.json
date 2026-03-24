@@ -5,7 +5,7 @@
   "entities": [
     {
       "id": "1:4813930281345985965",
-      "lastPropertyId": "3:1912826577571232590",
+      "lastPropertyId": "6:907136237728724922",
       "name": "MedicalChunck",
       "properties": [
         {
@@ -25,13 +25,18 @@
           "indexId": "1:7129993006723345755",
           "type": 28,
           "flags": 8
+        },
+        {
+          "id": "6:907136237728724922",
+          "name": "documentId",
+          "type": 6
         }
       ],
       "relations": []
     },
     {
       "id": "2:7892335375693174178",
-      "lastPropertyId": "4:8068613527180135179",
+      "lastPropertyId": "5:6459216988042606199",
       "name": "Medicaldata",
       "properties": [
         {
@@ -39,11 +44,6 @@
           "name": "id",
           "type": 6,
           "flags": 1
-        },
-        {
-          "id": "2:1458662112306212236",
-          "name": "tittle",
-          "type": 9
         },
         {
           "id": "3:8516148434488422207",
@@ -54,6 +54,11 @@
           "id": "4:8068613527180135179",
           "name": "timestamp",
           "type": 6
+        },
+        {
+          "id": "5:6459216988042606199",
+          "name": "title",
+          "type": 9
         }
       ],
       "relations": []
@@ -67,7 +72,11 @@
   "modelVersionParserMinimum": 5,
   "retiredEntityUids": [],
   "retiredIndexUids": [],
-  "retiredPropertyUids": [],
+  "retiredPropertyUids": [
+    8705693429733270488,
+    1458662112306212236,
+    8090815995554856348
+  ],
   "retiredRelationUids": [],
   "version": 1
 }

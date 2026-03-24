@@ -8,27 +8,31 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import java.io.File
-//object created to run llm in background
-object LLMInferenceManager{
-    private var llmInference: LlmInference? = null//check that if modle is running or not cause loading heavy modle every time makes tha app very heavy
-    private const val MODEL_NAME="gemma-1.1-2b-it-cpu-int4.bin"
-// creating the pipeline that connect modle to ui
-    private val _partialresult = MutableSharedFlow<String>(//privately store the input and pass it into modle
+
+/**
+ * Singleton that manages Gemma model loading and inference.
+ * All medical content is stripped from logs in release builds.
+ */
+object LLMInferenceManager {
+    private var llmInference: LlmInference? = null
+    private const val MODEL_NAME = "gemma-1.1-2b-it-cpu-int4.bin"
+
+    private val _partialresult = MutableSharedFlow<String>(
         replay = 0,
         extraBufferCapacity = 1,
         onBufferOverflow = BufferOverflow.DROP_OLDEST
     )
-    val partialresult: SharedFlow<String> = _partialresult.asSharedFlow()// store the result
+    val partialresult: SharedFlow<String> = _partialresult.asSharedFlow()
 
     fun initModel(context: Context) {
         if (llmInference != null) return
 
-        Log.d("AiBot", "1. Starting to load model...")
+        Log.d("AiBot", "Starting model load…")
 
         try {
             val modelFile = File(context.cacheDir, MODEL_NAME)
             if (!modelFile.exists()) {
-                Log.d("AiBot", "2. Copying file from Assets to Cache...")
+                Log.d("AiBot", "Copying model from assets to cache…")
                 context.assets.open(MODEL_NAME).use { inputStream ->
                     modelFile.outputStream().use { outputStream ->
                         inputStream.copyTo(outputStream)
@@ -36,38 +40,41 @@ object LLMInferenceManager{
                 }
             }
 
-            Log.d("AiBot", "3. File ready. Configuring engine...")
+            Log.d("AiBot", "Configuring LLM engine…")
             val options = LlmInference.LlmInferenceOptions.builder()
                 .setModelPath(modelFile.absolutePath)
                 .setMaxTokens(1024)
                 .setResultListener { partialResult, done ->
-                    Log.d("AiBot", "AI said: $partialResult") // Watch the AI talk in logs
+                    // SECURITY: Do NOT log partialResult — it may contain medical content
+                    Log.d("AiBot", "Partial result received (done=$done)")
                     _partialresult.tryEmit(partialResult)
                 }
                 .build()
 
-            Log.d("AiBot", "4. Loading into RAM (This is the heavy part)...")
+            Log.d("AiBot", "Loading model into RAM…")
             llmInference = LlmInference.createFromOptions(context, options)
-            Log.d("AiBot", "5. SUCCESS! Brain is alive.")
+            Log.d("AiBot", "Model loaded successfully.")
 
         } catch (e: Exception) {
-            // If it fails, this will print the EXACT reason in red text
-            Log.e("AiBot", "CRITICAL ERROR LOADING AI: ${e.message}")
+            Log.e("AiBot", "CRITICAL: Model load failed: ${e.message}")
+            throw e  // Re-throw so ViewModel can set ERROR state
         }
     }
 
     fun generateResponse(prompt: String) {
         if (llmInference == null) {
-            Log.e("AiBot", "Cannot generate response. The Brain is null!")
+            Log.e("AiBot", "Cannot generate: model not loaded")
             return
         }
 
-        Log.d("AiBot", "6. Sending message to AI: $prompt")
+        // SECURITY: Do NOT log the prompt — it contains medical records
+        Log.d("AiBot", "Generating response…")
         val formattedPrompt = "<start_of_turn>user\n$prompt<end_of_turn>\n<start_of_turn>model\n"
 
         try {
             llmInference?.generateResponseAsync(formattedPrompt)
         } catch (e: Exception) {
-            Log.e("AiBot", "Error during generation: ${e.message}")
+            Log.e("AiBot", "Generation error: ${e.message}")
         }
-    }}
+    }
+}

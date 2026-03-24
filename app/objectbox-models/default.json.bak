@@ -1,0 +1,81 @@
+{
+  "_note1": "KEEP THIS FILE! Check it into a version control system (VCS) like git.",
+  "_note2": "ObjectBox manages crucial IDs for your object model. See docs for details.",
+  "_note3": "If you have VCS merge conflicts, you must resolve them according to ObjectBox docs.",
+  "entities": [
+    {
+      "id": "1:4813930281345985965",
+      "lastPropertyId": "5:8090815995554856348",
+      "name": "MedicalChunck",
+      "properties": [
+        {
+          "id": "1:8601003863048338254",
+          "name": "id",
+          "type": 6,
+          "flags": 1
+        },
+        {
+          "id": "2:4293436908748368700",
+          "name": "chunkedtext",
+          "type": 9
+        },
+        {
+          "id": "3:1912826577571232590",
+          "name": "textEmbedding",
+          "indexId": "1:7129993006723345755",
+          "type": 28,
+          "flags": 8
+        },
+        {
+          "id": "5:8090815995554856348",
+          "name": "parentId",
+          "type": 6
+        }
+      ],
+      "relations": []
+    },
+    {
+      "id": "2:7892335375693174178",
+      "lastPropertyId": "5:6459216988042606199",
+      "name": "Medicaldata",
+      "properties": [
+        {
+          "id": "1:5534726571492474338",
+          "name": "id",
+          "type": 6,
+          "flags": 1
+        },
+        {
+          "id": "3:8516148434488422207",
+          "name": "imagePath",
+          "type": 9
+        },
+        {
+          "id": "4:8068613527180135179",
+          "name": "timestamp",
+          "type": 6
+        },
+        {
+          "id": "5:6459216988042606199",
+          "name": "title",
+          "type": 9
+        }
+      ],
+      "relations": []
+    }
+  ],
+  "lastEntityId": "2:7892335375693174178",
+  "lastIndexId": "1:7129993006723345755",
+  "lastRelationId": "0:0",
+  "lastSequenceId": "0:0",
+  "modelVersion": 5,
+  "modelVersionParserMinimum": 5,
+  "retiredEntityUids": [],
+  "retiredIndexUids": [],
+  "retiredPropertyUids": [
+    8705693429733270488,
+    1458662112306212236
+  ],
+  "retiredRelationUids": [],
+  "version": 1
+}

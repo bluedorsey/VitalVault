@@ -3,11 +3,9 @@ package com.example.personalhealthcareapp.vision
 import android.content.Context
 import android.net.Uri
 import android.util.Log
-import androidx.compose.runtime.snapshots.SnapshotApplyResult
 import com.google.mlkit.vision.common.InputImage
 import com.google.mlkit.vision.text.TextRecognition
 import com.google.mlkit.vision.text.latin.TextRecognizerOptions
-import java.security.PrivilegedExceptionAction
 
 //OCR optical Character Recognition
 object OCR {

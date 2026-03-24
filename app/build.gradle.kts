@@ -69,4 +69,9 @@ dependencies {
     //for text embedding
     implementation("com.google.mediapipe:tasks-text:0.10.14")
 
+    implementation("io.coil-kt:coil-compose:2.6.0")
+
+    // Jetpack Navigation Compose
+    implementation("androidx.navigation:navigation-compose:2.7.7")
+
 }

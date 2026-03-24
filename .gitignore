@@ -1,5 +1,5 @@
 *.iml
-.gradle
+.gradle/
 /local.properties
 /.idea/caches
 /.idea/libraries
@@ -8,11 +8,14 @@
 /.idea/navEditor.xml
 /.idea/assetWizardSettings.xml
 .DS_Store
-/build
-/captures
-.externalNativeBuild
-.cxx
+build/
+captures/
+.externalNativeBuild/
+.cxx/
 local.properties
+.claude/
+.agents/
+CLAUDE.md
 
 # Heavy ML Models
 *.bin
@@ -21,3 +24,4 @@ local.properties
 *.h5
 *.pt
 *.safetensors
+
