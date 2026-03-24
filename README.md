@@ -14,7 +14,6 @@
 
 <p align="center">
   <img src="https://img.shields.io/badge/API-24%2B-brightgreen?style=flat-square" />
-  <img src="https://img.shields.io/badge/License-Private-blue?style=flat-square" />
   <img src="https://img.shields.io/badge/Network-NONE-red?style=flat-square&label=Internet%20Required" />
   <img src="https://img.shields.io/badge/Privacy-100%25%20Offline-success?style=flat-square" />
 </p>
@@ -223,11 +222,7 @@ This is a private project. Please contact the repository owner for contribution 
 
 ---
 
-## 📄 License
 
-This project is private and proprietary. All rights reserved.
-
----
 
 <p align="center">
   <strong>Built with ❤️ for health data privacy</strong><br/>
