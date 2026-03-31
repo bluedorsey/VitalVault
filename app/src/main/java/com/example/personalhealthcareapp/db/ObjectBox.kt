@@ -55,6 +55,38 @@ object ObjectBox {
         Log.d(TAG, "Document $documentId deleted. Remaining chunks: ${chunkBox.count()}")
     }
 
+    /**
+     * Searches for similar chunks scoped to a single document.
+     * Because ObjectBox HNSW doesn't support compound queries, we fetch all chunks
+     * for the document first, then rank by dot-product similarity in memory.
+     */
+    fun searchSimilarChunksInDocument(
+        questionVector: FloatArray,
+        documentId: Long,
+        maxResults: Int = 5
+    ): List<MedicalChunck> {
+        val chunkBox = store.boxFor(MedicalChunck::class.java)
+        val docChunks = chunkBox.query()
+            .equal(MedicalChunck_.documentId, documentId)
+            .build()
+            .find()
+
+        Log.d(TAG, "searchSimilarChunksInDocument — doc=$documentId, chunks=${docChunks.size}")
+        if (docChunks.isEmpty()) return emptyList()
+
+        return docChunks
+            .filter { it.textEmbedding != null && it.textEmbedding!!.size == questionVector.size }
+            .sortedByDescending { chunk -> dotProduct(questionVector, chunk.textEmbedding!!) }
+            .take(maxResults)
+    }
+
+    private fun dotProduct(a: FloatArray, b: FloatArray): Float {
+        var sum = 0f
+        val len = minOf(a.size, b.size)
+        for (i in 0 until len) sum += a[i] * b[i]
+        return sum
+    }
+
     fun searchSimilarChunks(questionVector: FloatArray, maxResults: Int = 5): List<MedicalChunck> {
         val chunkBox   = store.boxFor(MedicalChunck::class.java)
         val totalCount = chunkBox.count()

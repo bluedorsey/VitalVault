@@ -7,9 +7,7 @@ plugins {
 
 android {
     namespace = "com.example.personalhealthcareapp"
-    compileSdk {
-        version = release(36)
-    }
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.example.personalhealthcareapp"
@@ -73,5 +71,8 @@ dependencies {
 
     // Jetpack Navigation Compose
     implementation("androidx.navigation:navigation-compose:2.7.7")
+    
+    // Extended Material Icons
+    implementation("androidx.compose.material:material-icons-extended")
 
 }

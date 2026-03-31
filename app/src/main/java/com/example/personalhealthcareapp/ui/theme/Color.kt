@@ -2,10 +2,13 @@ package com.example.personalhealthcareapp.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
-val Purple80 = Color(0xFFD0BCFF)
-val PurpleGrey80 = Color(0xFFCCC2DC)
-val Pink80 = Color(0xFFEFB8C8)
+val TealDark = Color(0xFF135A4F) // Primary buttons, dark icons, bold text
+val TealLight = Color(0xFFB7E4DA) // Cardiology report card background
+val TealVeryLight = Color(0xFFD4EFE8) // System synchronized pill
+val BackgroundClay = Color(0xFFF6F8FA) // Main screen background
+val TextDark = Color(0xFF3B5652) // Default text
+val TextLight = Color(0xFF8B9D9A) // Secondary text (e.g. your health sculpted...)
+val WhiteCore = Color(0xFFFFFFFF) // Surface, input box
 
-val Purple40 = Color(0xFF6650a4)
-val PurpleGrey40 = Color(0xFF625b71)
-val Pink40 = Color(0xFF7D5260)
+val ClayShadowLight = Color(0xFFFFFFFF)
+val ClayShadowDark = Color(0xFFD8E2DF)

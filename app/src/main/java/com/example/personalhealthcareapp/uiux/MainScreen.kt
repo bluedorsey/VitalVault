@@ -1,220 +1,272 @@
 package com.example.personalhealthcareapp.uiux
 
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Send
-import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.AccountCircle
+import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.Folder
+import androidx.compose.material.icons.filled.HealthAndSafety
+import androidx.compose.material.icons.filled.ShowChart
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.personalhealthcareapp.ViewModel.ChatViewModel
 import com.example.personalhealthcareapp.chat_managment.Chat_message
+import com.example.personalhealthcareapp.ui.theme.*
 import kotlinx.coroutines.launch
 
-/**
- * Main chat screen for VitalVault.
- * Displays conversation history, status bar, and message input.
- */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MainScreen(
     onNavigateToUpload: () -> Unit = {},
     viewModel: ChatViewModel = viewModel()
 ) {
     val chatHistory by viewModel.chathistory.collectAsState()
-    val responseStatus by viewModel.responseStatus.collectAsState()
     val modelState by viewModel.modelState.collectAsState()
 
     Scaffold(
-        topBar = {
-            TopAppBar(
-                title = {
-                    Column {
-                        Text(
-                            text = "VitalVault",
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 20.sp
-                        )
-                        Text(
-                            text = when (modelState) {
-                                ChatViewModel.ModelState.LOADING -> "Loading AI model…"
-                                ChatViewModel.ModelState.READY -> "AI ready"
-                                ChatViewModel.ModelState.ERROR -> "AI failed to load"
-                            },
-                            fontSize = 12.sp,
-                            color = when (modelState) {
-                                ChatViewModel.ModelState.LOADING -> MaterialTheme.colorScheme.tertiary
-                                ChatViewModel.ModelState.READY -> MaterialTheme.colorScheme.primary
-                                ChatViewModel.ModelState.ERROR -> MaterialTheme.colorScheme.error
-                            }
-                        )
-                    }
-                },
-                actions = {
-                    IconButton(onClick = onNavigateToUpload) {
-                        Icon(
-                            imageVector = Icons.Default.Add,
-                            contentDescription = "Upload Document"
-                        )
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
-                )
-            )
-        }
+        containerColor = BackgroundClay,
+        topBar = { TopHeader() }
     ) { paddingValues ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
         ) {
-            // Chat message list
-            val listState = rememberLazyListState()
-            val coroutineScope = rememberCoroutineScope()
-
-            // Auto-scroll when new messages arrive
-            LaunchedEffect(chatHistory.size) {
-                if (chatHistory.isNotEmpty()) {
-                    listState.animateScrollToItem(chatHistory.size - 1)
-                }
-            }
-
-            LazyColumn(
-                state = listState,
+            
+            AnimatedContent(
+                targetState = chatHistory.isEmpty(),
                 modifier = Modifier
                     .weight(1f)
-                    .fillMaxWidth()
-                    .padding(horizontal = 12.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-                contentPadding = PaddingValues(vertical = 12.dp)
-            ) {
-                items(chatHistory) { message ->
-                    ChatBubble(message)
-                }
+                    .fillMaxWidth(),
+                transitionSpec = {
+                    if (targetState) {
+                        (fadeIn(tween(600)) + slideInVertically(tween(600), initialOffsetY = { -it / 8 })) togetherWith
+                                (fadeOut(tween(400)) + slideOutVertically(tween(400), targetOffsetY = { -it / 8 }))
+                    } else {
+                        (fadeIn(tween(600)) + slideInVertically(tween(600), initialOffsetY = { it / 8 })) togetherWith
+                                fadeOut()
+                    }
+                },
+                label = "ChatContentTransition"
+            ) { isEmpty ->
+                if (isEmpty) EmptyHeroState()
+                else ChatList(chatHistory)
             }
 
-            // Input area
-            MessageInput(
+            // Chat Input bottom bar
+            ClayChatInput(
                 enabled = modelState == ChatViewModel.ModelState.READY,
-                onSend = { text ->
-                    viewModel.sendMessage(text)
-                    coroutineScope.launch {
-                        if (chatHistory.isNotEmpty()) {
-                            listState.animateScrollToItem(chatHistory.size)
-                        }
-                    }
-                }
+                onSend = { text -> viewModel.sendMessage(text) }
             )
         }
     }
 }
 
 @Composable
-private fun ChatBubble(chat: Chat_message) {
-    val isUser = chat.isUser
-    val bubbleColor = if (isUser) {
-        MaterialTheme.colorScheme.primaryContainer
-    } else {
-        MaterialTheme.colorScheme.secondaryContainer
-    }
-    val alignment = if (isUser) Alignment.End else Alignment.Start
-
-    Column(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalAlignment = alignment
+private fun TopHeader() {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 24.dp, vertical = 24.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
     ) {
-        Text(
-            text = if (isUser) "You" else "VitalVault AI",
-            fontSize = 11.sp,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
-        )
+        Column {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.Default.HealthAndSafety, contentDescription = "Logo", tint = TealDark, modifier = Modifier.size(24.dp))
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("VITALVAULT", fontWeight = FontWeight.Bold, color = TealDark, fontSize = 20.sp, letterSpacing = 2.sp)
+            }
+            Text("AI READY", color = TextLight, fontSize = 10.sp, letterSpacing = 1.sp, modifier = Modifier.padding(start = 32.dp))
+        }
+        Icon(Icons.Default.AccountCircle, contentDescription = "Profile", tint = TextDark, modifier = Modifier.size(42.dp))
+    }
+}
+
+@Composable
+private fun EmptyHeroState() {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(horizontal = 24.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        // Central Huge Clay Circle
         Box(
             modifier = Modifier
-                .widthIn(max = 300.dp)
-                .clip(
-                    RoundedCornerShape(
-                        topStart = 16.dp,
-                        topEnd = 16.dp,
-                        bottomStart = if (isUser) 16.dp else 4.dp,
-                        bottomEnd = if (isUser) 4.dp else 16.dp
-                    )
-                )
-                .background(bubbleColor)
-                .padding(12.dp)
+                .size(260.dp)
+                .clayCircle(),
+            contentAlignment = Alignment.Center
         ) {
-            Text(
-                text = chat.text,
-                fontSize = 15.sp,
-                color = if (isUser) {
-                    MaterialTheme.colorScheme.onPrimaryContainer
-                } else {
-                    MaterialTheme.colorScheme.onSecondaryContainer
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Icon(
+                    imageVector = Icons.Default.Favorite,
+                    contentDescription = "Heart",
+                    modifier = Modifier.size(84.dp),
+                    tint = TealDark
+                )
+                Spacer(modifier = Modifier.height(24.dp))
+                Box(
+                    modifier = Modifier
+                        .claySurface(shape = RoundedCornerShape(16.dp), backgroundColor = TealVeryLight, elevation = 4.dp)
+                        .padding(horizontal = 16.dp, vertical = 8.dp)
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Box(modifier = Modifier.size(8.dp).background(Color(0xFF4CAF50), CircleShape))
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("SYSTEM SYNCHRONIZED", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = TealDark)
+                    }
                 }
-            )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(48.dp))
+
+        Text("Your health, sculpted by intelligence.", fontSize = 18.sp, color = TextDark, textAlign = TextAlign.Center)
+        Spacer(modifier = Modifier.height(16.dp))
+        Text(
+            "VitalVault organizes your records into a cohesive bio-narrative, securing your data in our tactile-encryption sanctuary.",
+            fontSize = 14.sp, color = TextLight, textAlign = TextAlign.Center, lineHeight = 20.sp
+        )
+
+        Spacer(modifier = Modifier.height(48.dp))
+
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+            StatCard(modifier = Modifier.weight(1f), title = "TOTAL RECORDS", value = "142", icon = Icons.Default.Folder)
+            StatCard(modifier = Modifier.weight(1f), title = "HEALTH SCORE", value = "94%", icon = Icons.Default.ShowChart)
         }
     }
 }
 
 @Composable
-private fun MessageInput(
-    enabled: Boolean,
-    onSend: (String) -> Unit
-) {
-    var text by remember { mutableStateOf("") }
-
-    Surface(
-        tonalElevation = 3.dp,
-        modifier = Modifier.fillMaxWidth()
+private fun StatCard(modifier: Modifier = Modifier, title: String, value: String, icon: androidx.compose.ui.graphics.vector.ImageVector) {
+    Box(
+        modifier = modifier
+            .claySurface()
+            .padding(20.dp)
     ) {
-        Row(
+        Column {
+            Icon(icon, contentDescription = title, tint = TealDark, modifier = Modifier.size(28.dp))
+            Spacer(modifier = Modifier.height(16.dp))
+            Text(title, fontSize = 11.sp, fontWeight = FontWeight.Bold, color = TextLight, letterSpacing = 0.5.sp)
+            Text(value, fontSize = 28.sp, fontWeight = FontWeight.Bold, color = TextDark)
+        }
+    }
+}
+
+@Composable
+private fun ChatList(history: List<Chat_message>) {
+    val listState = rememberLazyListState()
+    val coroutineScope = rememberCoroutineScope()
+    
+    LaunchedEffect(history.size) {
+        if (history.isNotEmpty()) {
+            listState.animateScrollToItem(history.size - 1)
+        }
+    }
+
+    LazyColumn(
+        state = listState,
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(horizontal = 24.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp),
+        contentPadding = PaddingValues(top = 24.dp, bottom = 24.dp)
+    ) {
+        items(history) { msg ->
+            val isUser = msg.isUser
+            val alignment = if (isUser) Alignment.CenterEnd else Alignment.CenterStart
+            val bgColor = if (isUser) TealDark else WhiteCore
+            val textColor = if (isUser) WhiteCore else TextDark
+
+            Box(modifier = Modifier.fillMaxWidth(), contentAlignment = alignment) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth(0.85f)
+                        .claySurface(
+                            backgroundColor = bgColor,
+                            shape = RoundedCornerShape(
+                                topStart = 24.dp,
+                                topEnd = 24.dp,
+                                bottomStart = if (isUser) 24.dp else 4.dp,
+                                bottomEnd = if (isUser) 4.dp else 24.dp
+                            ),
+                            elevation = 8.dp
+                        )
+                        .padding(20.dp)
+                ) {
+                    Text(msg.text, color = textColor, fontSize = 15.sp, lineHeight = 22.sp)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ClayChatInput(enabled: Boolean, onSend: (String) -> Unit) {
+    var text by remember { mutableStateOf("") }
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 24.dp, vertical = 24.dp)
+    ) {
+        Box(
             modifier = Modifier
-                .padding(horizontal = 12.dp, vertical = 8.dp),
-            verticalAlignment = Alignment.CenterVertically
+                .fillMaxWidth()
+                .claySurface(shape = RoundedCornerShape(32.dp), elevation = 16.dp)
+                .padding(start = 24.dp, end = 8.dp, top = 8.dp, bottom = 8.dp),
+            contentAlignment = Alignment.CenterStart
         ) {
-            OutlinedTextField(
-                value = text,
-                onValueChange = { text = it },
-                enabled = enabled,
-                modifier = Modifier.weight(1f),
-                placeholder = {
-                    Text(
-                        if (enabled) "Ask about your health records…"
-                        else "Waiting for AI to load…"
-                    )
-                },
-                shape = RoundedCornerShape(24.dp),
-                singleLine = false,
-                maxLines = 4
-            )
-
-            Spacer(modifier = Modifier.width(8.dp))
-
-            FilledIconButton(
-                onClick = {
-                    if (text.isNotBlank()) {
-                        onSend(text.trim())
-                        text = ""
-                    }
-                },
-                enabled = enabled && text.isNotBlank()
-            ) {
-                Icon(
-                    imageVector = Icons.AutoMirrored.Filled.Send,
-                    contentDescription = "Send"
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                TextField(
+                    value = text,
+                    onValueChange = { text = it },
+                    enabled = enabled,
+                    modifier = Modifier.weight(1f),
+                    placeholder = { Text(if(enabled) "Ask about your health rec..." else "Initializing AI...", color = TextLight, fontSize = 15.sp) },
+                    colors = TextFieldDefaults.colors(
+                        focusedContainerColor = Color.Transparent,
+                        unfocusedContainerColor = Color.Transparent,
+                        disabledContainerColor = Color.Transparent,
+                        focusedIndicatorColor = Color.Transparent,
+                        unfocusedIndicatorColor = Color.Transparent,
+                        disabledIndicatorColor = Color.Transparent
+                    ),
+                    maxLines = 3
                 )
+                
+                // Send button
+                IconButton(
+                    onClick = { if(text.isNotBlank()) { onSend(text.trim()); text = "" } },
+                    enabled = enabled && text.isNotBlank(),
+                    modifier = Modifier
+                        .size(56.dp)
+                        .background(if (text.isNotBlank()) TealDark else TextLight, CircleShape)
+                ) {
+                    Icon(Icons.AutoMirrored.Filled.Send, contentDescription = "Send", tint = WhiteCore, modifier = Modifier.size(24.dp))
+                }
             }
         }
     }

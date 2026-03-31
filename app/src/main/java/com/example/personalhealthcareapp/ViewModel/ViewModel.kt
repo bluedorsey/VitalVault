@@ -69,26 +69,46 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                 // Step 1: Embed the question
                 val questionVector = Embedding.generateVector(message)
 
-                // Step 2: Search for relevant chunks (RAG retrieval)
+                // Step 2: Check if the query targets a specific document by title
+                val allDocuments = ObjectBox.getAllDocuments()
+                val mentionedDoc = allDocuments.firstOrNull { doc ->
+                    doc.title.isNotBlank() && message.contains(doc.title, ignoreCase = true)
+                }
+
+                // Step 3: Search for relevant chunks (RAG retrieval)
                 val contextChunks = if (questionVector != null) {
-                    ObjectBox.searchSimilarChunks(questionVector, maxResults = 5)
+                    if (mentionedDoc != null) {
+                        // Scoped search within the named document
+                        ObjectBox.searchSimilarChunksInDocument(
+                            questionVector, mentionedDoc.id, maxResults = 5
+                        )
+                    } else {
+                        ObjectBox.searchSimilarChunks(questionVector, maxResults = 5)
+                    }
                 } else {
                     emptyList()
                 }
 
-                // Step 3: Build context string from top 3 results
+                // Step 4: Build context string — label chunks with document title
                 val context = if (contextChunks.isNotEmpty()) {
                     val topChunks = contextChunks.take(3)
+                    val sourceLabel = mentionedDoc?.title ?: "Medical Records"
                     topChunks.mapIndexed { index, chunk ->
-                        "[Record ${index + 1}]: ${chunk.chunkedtext}"
+                        "[$sourceLabel — Record ${index + 1}]: ${chunk.chunkedtext}"
                     }.joinToString("\n\n")
                 } else {
                     ""
                 }
 
-                // Step 4: Build the RAG-grounded prompt
+                // Step 5: Build the RAG-grounded prompt
+                val scopeNote = if (mentionedDoc != null)
+                    "The records below are from the document titled \"${mentionedDoc.title}\"."
+                else
+                    "The records below are from the patient's medical vault."
+
                 val fullPrompt = if (context.isNotEmpty()) {
                     """Based on the following medical records, answer the question.
+                        |$scopeNote
                         |If the records don't contain relevant information, say so.
                         |
                         |MEDICAL RECORDS:
@@ -103,7 +123,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                         |QUESTION: $message""".trimMargin()
                 }
 
-                // Step 5: Send to LLM
+                // Step 6: Send to LLM
                 LLMInferenceManager.generateResponse(fullPrompt)
 
             } catch (e: Exception) {
