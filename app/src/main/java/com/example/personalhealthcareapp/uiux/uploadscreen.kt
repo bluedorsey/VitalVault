@@ -374,10 +374,13 @@ fun UploadScreen(onNavigateBack: () -> Unit) {
                                             val chunks = TextChunker.chunkText(text)
                                             chunks.forEachIndexed { i, chunkText ->
                                                 statusMessage = "Indexing chunk ${i + 1} of ${chunks.size}…"
-                                                val vector = Embedding.generateVector(chunkText)
+                                                // Prefix every chunk with its document title so the
+                                                // embedding and stored text are both document-aware.
+                                                val taggedChunk = "[$documentTitle]: $chunkText"
+                                                val vector = Embedding.generateVector(taggedChunk)
                                                 if (vector != null) {
                                                     val chunk = MedicalChunck(
-                                                        chunkedtext = chunkText,
+                                                        chunkedtext = taggedChunk,
                                                         documentId = docId,
                                                         textEmbedding = vector
                                                     )

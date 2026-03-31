@@ -75,49 +75,97 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                     doc.title.isNotBlank() && message.contains(doc.title, ignoreCase = true)
                 }
 
-                // Step 3: Search for relevant chunks (RAG retrieval)
-                val contextChunks = if (questionVector != null) {
-                    if (mentionedDoc != null) {
-                        // Scoped search within the named document
-                        ObjectBox.searchSimilarChunksInDocument(
-                            questionVector, mentionedDoc.id, maxResults = 5
-                        )
-                    } else {
-                        ObjectBox.searchSimilarChunks(questionVector, maxResults = 5)
+                // Step 3: Retrieve context chunks via hybrid search
+                //
+                // Strategy:
+                //  A) Specific doc mentioned → load ALL its chunks (no ranking loss)
+                //  B) Cross-vault → vector similarity (top 5)
+                //  C) Always ALSO run keyword search on meaningful words from the query
+                //     so short/name-based queries ("olivia", "doctor") get direct text hits.
+                //  Merge A/B with C, deduplicate by id.
+
+                val vectorChunks: List<com.example.personalhealthcareapp.db.MedicalChunck> = when {
+                    mentionedDoc != null -> {
+                        val allChunks = ObjectBox.getAllChunksForDocument(mentionedDoc.id)
+                        if (allChunks.size > 10 && questionVector != null) {
+                            ObjectBox.searchSimilarChunksInDocument(
+                                questionVector, mentionedDoc.id, maxResults = 10
+                            )
+                        } else {
+                            allChunks
+                        }
                     }
-                } else {
-                    emptyList()
+                    questionVector != null ->
+                        ObjectBox.searchSimilarChunks(questionVector, maxResults = 5)
+                    else -> emptyList()
                 }
 
-                // Step 4: Build context string — label chunks with document title
-                val context = if (contextChunks.isNotEmpty()) {
-                    val topChunks = contextChunks.take(3)
-                    val sourceLabel = mentionedDoc?.title ?: "Medical Records"
-                    topChunks.mapIndexed { index, chunk ->
-                        "[$sourceLabel — Record ${index + 1}]: ${chunk.chunkedtext}"
-                    }.joinToString("\n\n")
-                } else {
-                    ""
+                // Extract meaningful keywords: words > 3 chars, skip common stop-words
+                val stopWords = setOf(
+                    "what", "does", "says", "said", "have", "from", "with", "that",
+                    "this", "were", "they", "them", "their", "when", "where", "which",
+                    "there", "about", "would", "could", "should", "will", "been",
+                    "being", "more", "also", "into", "some", "then", "than", "only",
+                    "just", "name", "tell", "give", "show", "find", "look", "know"
+                )
+                val keywords = message
+                    .split(" ", ",", "?", "!", ".", "\n")
+                    .map { it.trim().lowercase() }
+                    .filter { it.length > 3 && it !in stopWords }
+
+                val keywordChunks = ObjectBox.keywordSearchChunks(keywords)
+
+                // Merge: vector results first (ranked), then any new keyword-only hits
+                val seen = mutableSetOf<Long>()
+                val contextChunks = buildList {
+                    for (c in vectorChunks) { if (seen.add(c.id)) add(c) }
+                    for (c in keywordChunks) { if (seen.add(c.id)) add(c) }
+                }
+
+                // Step 4: Build context grouped by document.
+                // Using documentId (always available) to group, then look up title.
+                // This gives the LLM clear document boundaries regardless of whether
+                // chunks have the new [Title]: prefix or are from old uploads.
+                val docById = allDocuments.associateBy { it.id }
+                val chunksByDoc = contextChunks.groupBy { it.documentId }
+
+                val context = chunksByDoc.entries.joinToString("\n\n") { (docId, chunks) ->
+                    val docTitle = docById[docId]?.title ?: "Unknown Document"
+                    val parts = chunks.mapIndexed { i, chunk ->
+                        "  [Part ${i + 1}]: ${chunk.chunkedtext}"
+                    }.joinToString("\n")
+                    "=== REPORT: $docTitle ===\n$parts"
                 }
 
                 // Step 5: Build the RAG-grounded prompt
                 val scopeNote = if (mentionedDoc != null)
-                    "The records below are from the document titled \"${mentionedDoc.title}\"."
+                    "The records below are the complete contents of the \"${mentionedDoc.title}\" report."
                 else
-                    "The records below are from the patient's medical vault."
+                    "The records below are retrieved from the patient's medical vault across multiple reports. " +
+                    "Identify which report is most relevant to the question and mention it by name in your answer."
+
+                val formatHint = """
+                    |Answer with the relevant details below (only include what is present in the records):
+                    |- Source Report: <name of the report this info comes from>
+                    |- Doctor Name: <value or "Not mentioned">
+                    |- Health Condition / Diagnosis: <value or "Not mentioned">
+                    |- Report Date: <value or "Not mentioned">
+                    |- Key Findings / Vitals: <value or "Not mentioned">
+                    |- Medications / Next Steps: <value or "Not mentioned">
+                """.trimMargin()
 
                 val fullPrompt = if (context.isNotEmpty()) {
-                    """Based on the following medical records, answer the question.
+                    """You are a medical records assistant. Answer based solely on the records provided.
                         |$scopeNote
-                        |If the records don't contain relevant information, say so.
+                        |$formatHint
                         |
                         |MEDICAL RECORDS:
                         |$context
                         |
                         |QUESTION: $message""".trimMargin()
                 } else {
-                    """No medical records found in the database for this query.
-                        |Please answer the following general health question, and mention
+                    """No matching medical records were found for this query.
+                        |Please answer the following general health question and mention
                         |that no personal records were found.
                         |
                         |QUESTION: $message""".trimMargin()

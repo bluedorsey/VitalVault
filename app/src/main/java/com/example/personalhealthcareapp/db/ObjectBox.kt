@@ -3,6 +3,7 @@ package com.example.personalhealthcareapp.db
 import android.content.Context
 import android.util.Log
 import io.objectbox.BoxStore
+import io.objectbox.query.QueryBuilder
 
 private const val TAG = "VitalVault_DB"
 
@@ -55,6 +56,15 @@ object ObjectBox {
         Log.d(TAG, "Document $documentId deleted. Remaining chunks: ${chunkBox.count()}")
     }
 
+    /** Returns all text chunks belonging to a specific document. */
+    fun getAllChunksForDocument(documentId: Long): List<MedicalChunck> {
+        return store.boxFor(MedicalChunck::class.java)
+            .query()
+            .equal(MedicalChunck_.documentId, documentId)
+            .build()
+            .find()
+    }
+
     /**
      * Searches for similar chunks scoped to a single document.
      * Because ObjectBox HNSW doesn't support compound queries, we fetch all chunks
@@ -85,6 +95,30 @@ object ObjectBox {
         val len = minOf(a.size, b.size)
         for (i in 0 until len) sum += a[i] * b[i]
         return sum
+    }
+
+    /**
+     * Keyword text search across all chunks.
+     * Returns any chunk whose text contains at least one of the given keywords.
+     * Used as a supplement to vector search to catch short/name-based queries.
+     */
+    fun keywordSearchChunks(keywords: List<String>): List<MedicalChunck> {
+        if (keywords.isEmpty()) return emptyList()
+        val chunkBox = store.boxFor(MedicalChunck::class.java)
+        val results = mutableMapOf<Long, MedicalChunck>()
+        for (keyword in keywords) {
+            try {
+                chunkBox.query()
+                    .contains(MedicalChunck_.chunkedtext, keyword, QueryBuilder.StringOrder.CASE_INSENSITIVE)
+                    .build()
+                    .find()
+                    .forEach { results[it.id] = it }
+            } catch (e: Exception) {
+                Log.w(TAG, "keywordSearch failed for '$keyword': ${e.message}")
+            }
+        }
+        Log.d(TAG, "keywordSearchChunks found ${results.size} chunks for keywords=$keywords")
+        return results.values.toList()
     }
 
     fun searchSimilarChunks(questionVector: FloatArray, maxResults: Int = 5): List<MedicalChunck> {
